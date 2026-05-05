@@ -1,3 +1,4 @@
+from flask import views
 from opentelemetry.sdk.metrics.export import (
     ConsoleMetricExporter,
     PeriodicExportingMetricReader,
@@ -9,10 +10,27 @@ from opentelemetry.sdk.metrics import Counter, Histogram, ObservableGauge
 from opentelemetry.sdk.metrics import MeterProvider
 import psutil
 
+from opentelemetry.sdk.metrics.view import (
+    View,
+    DropAggregation,
+    ExplicitBucketHistogramAggregation,
+)
+
+
+def create_views() -> list[View]:
+    views = []
+    
+    return views
+
+
+
 
 def create_meter(name: str, version: str) -> metric_api.Meter:
     metric_reader = create_metrics_pipeline(5000)
-    provider = MeterProvider(metric_readers=[metric_reader],)
+    views = create_views()
+    provider = MeterProvider(metric_readers=[metric_reader],
+                             resource=rc,
+                             views=views)
     
     metric_api.set_meter_provider(provider)
     meter = metric_api.get_meter(name, version)
