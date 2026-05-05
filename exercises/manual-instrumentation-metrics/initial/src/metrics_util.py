@@ -7,6 +7,7 @@ from opentelemetry.sdk.metrics.export import (
 from opentelemetry import metrics as metric_api
 from opentelemetry.sdk.metrics import Counter, Histogram, ObservableGauge
 from opentelemetry.sdk.metrics import MeterProvider
+import psutil
 
 
 def create_meter(name: str, version: str) -> metric_api.Meter:
@@ -26,14 +27,46 @@ def create_metrics_pipeline(export_interval: int) -> MetricReader:
     return reader
 
 
-def create_request_instruments(meter: metric_api.Meter) -> dict[str,metric_api.Instrument]:
-    index_counter = meter.create_counter(
-        name="index_called",
+def create_request_instruments(meter: metric_api.Meter) -> dict:
+    traffic_volume = meter.create_counter(
+        name="traffic_volume",
         unit="request",
-        description="Total number of requests to /"
+        description="Total volume of requests to an endpoint"
+    )
+    
+    error_rate = meter.create_counter(
+        name="error_rate",
+        unit="request",
+        description="rate of failed requests"
+    )
+    
+    request_latency = meter.create_histogram(
+        name="http.server.request.duraion",
+        unit="s",
+        description="latency for a request to be served",
     )
     
     instruments = {
-        "index_counter": index_counter,
+        "traffic_volume": traffic_volume,
+        "error_rate" : error_rate,
+        "request_latency": request_latency,
+    }
+    return instruments
+
+
+def get_cpu_utilization(opt: metric_api.CallbackOptions) -> metric_api.Observation:
+    cpu_util = psutil.cpu_percent(interval=None) / 100
+    yield metric_api.Observation(cpu_util)
+    
+def create_resource_instruments(meter: metric_api.Meter) -> dict:
+    cpu_util_gauge = meter.create_observable_gauge(
+        name="process.cpu.utilization",
+        callbacks=[get_cpu_utilization],
+        unit="1",
+        description="CPU utilization since last call",
+    )
+    
+    instruments = {
+        "cpu_utilization": cpu_util_gauge
     }
     return instruments
